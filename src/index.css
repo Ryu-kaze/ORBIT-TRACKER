@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    background-color: #080D18;
+    color: #F8FAFC;
+    overflow-x: hidden;
+  }
+
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-feature-settings: 'tnum' on, 'zero' on;
+  }
+}
+
+/* Custom Sleek Dark Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #080D18;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1E293B;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* Leaflet Container Styling Overrides */
+.leaflet-container {
+  background: #080D18 !important;
+  font-family: inherit;
+}
+
+.leaflet-bar a {
+  background-color: #111A2B !important;
+  color: #94A3B8 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.leaflet-bar a:hover {
+  background-color: #1E293B !important;
+  color: #48E5FF !important;
+}
+
+.leaflet-control-attribution {
+  background: rgba(8, 13, 24, 0.85) !important;
+  color: #64748B !important;
+  font-size: 9px !important;
+  font-family: 'JetBrains Mono', monospace !important;
+}
+
+.leaflet-control-attribution a {
+  color: #94A3B8 !important;
+}
+
+/* Tactical dark styling for standard OpenStreetMap tiles */
+.dark-osm-tile {
+  filter: brightness(0.6) invert(1) contrast(1.5) hue-rotate(200deg) saturate(0.35) brightness(0.8);
+}

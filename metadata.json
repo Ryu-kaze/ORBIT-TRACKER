@@ -1,0 +1,6 @@
+{
+  "name": "ORBIT GPS",
+  "description": "Personal Tracking Intelligence — High-precision IoT GPS tracker dashboard for ESP32 and NEO-6M with live telemetry, smart geofencing, route history playback, and diagnostics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

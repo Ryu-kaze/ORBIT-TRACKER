@@ -1,0 +1,13 @@
+{
+  "device_id": "ESP32-ORBIT-01",
+  "token": "orbit_secret_token_2026",
+  "lat": 37.774929,
+  "lng": -122.419416,
+  "speed": 18.4,
+  "altitude": 54.2,
+  "satellites": 9,
+  "fix": true,
+  "heading": 87.5,
+  "accuracy": 2.8,
+  "timestamp": 1700000000000
+}
