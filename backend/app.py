@@ -14,12 +14,13 @@ from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional, Tuple
 
 try:
-    from flask import Flask, request, jsonify, g
+    from flask import Flask, request, jsonify, g, send_from_directory
     from flask_cors import CORS
 except ImportError:
     # Allows module to be imported in non-Flask test environments
     Flask = None
     CORS = None
+    send_from_directory = None
 
 DB_PATH = os.environ.get("ORBIT_DB_PATH", os.path.join(os.path.dirname(__file__), "orbit_gps.db"))
 SCHEMA_PATH = os.path.join(os.path.dirname(__file__), "schema.sql")
@@ -164,6 +165,72 @@ def create_app(db_path: str = DB_PATH) -> Any:
         # When testing locally or if no token configured, accept DEFAULT_TOKEN
         expected_token = os.environ.get("DEVICE_AUTH_TOKEN", DEFAULT_TOKEN)
         return token == expected_token or not expected_token
+
+    DIST_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "dist"))
+
+    @app.route("/", methods=["GET"])
+    def index():
+        dist_index = os.path.join(DIST_DIR, "index.html")
+        if os.path.exists(dist_index) and send_from_directory:
+            return send_from_directory(DIST_DIR, "index.html")
+
+        # Sleek dark-themed status & landing page if accessed directly at http://localhost:5000/
+        return """
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>ORBIT GPS — Backend Service Online</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #080D18; color: #F8FAFC; margin: 0; padding: 40px 20px; display: flex; justify-content: center; }
+            .card { max-width: 680px; width: 100%; background: #111A2B; border: 1px solid #1E293B; border-radius: 14px; padding: 32px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+            .badge { display: inline-block; background: rgba(72, 229, 255, 0.15); color: #48E5FF; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; font-family: monospace; border: 1px solid rgba(72, 229, 255, 0.3); }
+            h1 { margin: 16px 0 8px; font-size: 24px; color: #FFFFFF; }
+            p { color: #94A3B8; font-size: 14px; line-height: 1.6; }
+            .btn { display: inline-block; background: #48E5FF; color: #080D18; font-weight: bold; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-size: 14px; margin-top: 16px; transition: 0.2s; }
+            .btn:hover { background: #38d4ee; }
+            .guide { background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px; padding: 14px; margin-top: 20px; font-size: 13px; color: #FDE68A; line-height: 1.5; }
+            .endpoints { margin-top: 24px; background: #080D18; border: 1px solid #1E293B; border-radius: 8px; padding: 16px; font-family: monospace; font-size: 12px; }
+            .endpoints a { color: #8B7CFF; text-decoration: none; display: block; margin: 8px 0; }
+            .endpoints a:hover { text-decoration: underline; color: #48E5FF; }
+          </style>
+        </head>
+        <body>
+          <div class="card">
+            <span class="badge">&#9679; FLASK REST API ONLINE (PORT 5000)</span>
+            <h1>ORBIT GPS Backend Server</h1>
+            <p>The Python Flask telemetry engine is running and ready to receive GPS packets from your ESP32 on <code>/api/telemetry</code>.</p>
+            
+            <div class="guide">
+              <strong>Looking for the Visual Map Dashboard?</strong><br>
+              In VS Code, the visual React dashboard runs via Vite on <strong>Port 3000</strong>. Run <code>npm run dev</code> in a terminal, then open:
+            </div>
+            
+            <a href="http://localhost:3000" class="btn">Open ORBIT GPS Dashboard (http://localhost:3000) &rarr;</a>
+
+            <div class="endpoints">
+              <strong style="color: #64748B;">TESTABLE API ENDPOINTS:</strong>
+              <a href="/api/health" target="_blank">&rarr; GET /api/health (Service Status)</a>
+              <a href="/api/device/status" target="_blank">&rarr; GET /api/device/status (ESP32 State)</a>
+              <a href="/api/telemetry/latest" target="_blank">&rarr; GET /api/telemetry/latest (Latest Telemetry)</a>
+              <a href="/api/geofences" target="_blank">&rarr; GET /api/geofences (Active Boundaries)</a>
+              <a href="/api/events" target="_blank">&rarr; GET /api/events (Alerts Log)</a>
+            </div>
+          </div>
+        </body>
+        </html>
+        """
+
+    @app.route("/<path:path>", methods=["GET"])
+    def static_proxy(path):
+        if not path.startswith("api/"):
+            if os.path.exists(os.path.join(DIST_DIR, path)) and send_from_directory:
+                return send_from_directory(DIST_DIR, path)
+            dist_index = os.path.join(DIST_DIR, "index.html")
+            if os.path.exists(dist_index) and send_from_directory:
+                return send_from_directory(DIST_DIR, "index.html")
+        return jsonify({"error": "Not Found", "message": f"Endpoint '/{path}' not found."}), 404
 
     @app.route("/api/health", methods=["GET"])
     def health():
