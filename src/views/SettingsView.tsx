@@ -23,6 +23,7 @@ interface SettingsViewProps {
   usbConnected?: boolean;
   usbPortInfo?: string;
   usbLogs?: string[];
+  isConnectingUsb?: boolean;
   onToggleUsb?: () => void;
 }
 
@@ -33,6 +34,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   usbConnected = false,
   usbPortInfo,
   usbLogs = [],
+  isConnectingUsb = false,
   onToggleUsb,
 }) => {
   const [backendUrl, setBackendUrl] = useState(apiService.getBackendUrl());
@@ -123,13 +125,22 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           {onToggleUsb && (
             <button
               onClick={onToggleUsb}
+              disabled={isConnectingUsb}
               className={`px-4 py-2 text-xs font-mono font-semibold rounded-lg transition-all flex items-center gap-2 shrink-0 ${
                 usbConnected
                   ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500/30'
+                  : isConnectingUsb
+                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 animate-pulse'
                   : 'bg-[#48E5FF] text-slate-950 font-bold hover:bg-[#38d4ee] shadow-[0_0_15px_rgba(72,229,255,0.3)]'
               }`}
             >
-              <span>{usbConnected ? `Disconnect (${usbPortInfo || 'COM'})` : 'Connect via USB Cable'}</span>
+              <span>
+                {usbConnected
+                  ? `Disconnect (${usbPortInfo || 'COM'})`
+                  : isConnectingUsb
+                  ? 'Opening COM selector...'
+                  : 'Connect via USB Cable'}
+              </span>
             </button>
           )}
         </div>

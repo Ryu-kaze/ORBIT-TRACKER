@@ -18,6 +18,14 @@ class WebSerialService {
   private connected = false;
   private portInfo = '';
 
+  public isInIframe(): boolean {
+    try {
+      return typeof window !== 'undefined' && window.self !== window.top;
+    } catch {
+      return true;
+    }
+  }
+
   public isSupported(): boolean {
     return typeof navigator !== 'undefined' && 'serial' in navigator;
   }
@@ -38,16 +46,27 @@ class WebSerialService {
     this.onRawLogCallback = callback;
   }
 
-  public async connect(baudRate: number = 115200): Promise<{ success: boolean; error?: string }> {
+  public async connect(baudRate: number = 115200): Promise<{ success: boolean; error?: string; code?: string }> {
+    if (this.isInIframe()) {
+      return {
+        success: false,
+        code: 'IFRAME_RESTRICTED',
+        error:
+          'Browser security restricts direct Web Serial access inside embedded preview frames. Please open http://localhost:3000 in its own standalone browser tab, or run the Python bridge script in your terminal.',
+      };
+    }
+
     if (!this.isSupported()) {
       return {
         success: false,
-        error: 'Web Serial API is not supported in this browser. Please use Google Chrome or Microsoft Edge.',
+        code: 'NOT_SUPPORTED',
+        error:
+          'Web Serial API is not supported in this browser. Please use Google Chrome, Microsoft Edge, or Opera on Windows.',
       };
     }
 
     try {
-      // Prompt user to select ESP32 COM port
+      // Prompt user to select ESP32 COM port from browser OS dialog
       this.port = await (navigator as any).serial.requestPort();
       await this.port.open({ baudRate });
       this.connected = true;
@@ -58,10 +77,10 @@ class WebSerialService {
         if (info && (info.usbVendorId || info.usbProductId)) {
           this.portInfo = `USB VID:${info.usbVendorId?.toString(16)} PID:${info.usbProductId?.toString(16)}`;
         } else {
-          this.portInfo = 'USB Serial (COM)';
+          this.portInfo = 'USB Serial (COM3)';
         }
       } catch {
-        this.portInfo = 'USB Serial (COM)';
+        this.portInfo = 'USB Serial (COM3)';
       }
 
       // Start background reading loop
@@ -70,7 +89,32 @@ class WebSerialService {
     } catch (err: unknown) {
       this.connected = false;
       const msg = err instanceof Error ? err.message : String(err);
-      return { success: false, error: msg };
+      
+      if (msg.includes('No port selected') || msg.includes('cancelled') || msg.includes('canceled') || (err as any)?.name === 'NotFoundError') {
+        return {
+          success: false,
+          code: 'USER_CANCELLED',
+          error: 'No serial port was selected. Please click Connect USB and choose COM3 from the list.',
+        };
+      }
+
+      if (msg.includes('Failed to open') || msg.includes('Access denied') || msg.includes('busy') || (err as any)?.name === 'NetworkError') {
+        return {
+          success: false,
+          code: 'PORT_BUSY',
+          error: 'COM3 could not be opened. Please close the Serial Monitor in Arduino IDE so the COM port is released, then retry.',
+        };
+      }
+
+      if (msg.includes('The frame is not allowed to request') || (err as any)?.name === 'SecurityError') {
+        return {
+          success: false,
+          code: 'IFRAME_RESTRICTED',
+          error: 'Direct USB serial access is blocked inside preview frames. Please open http://localhost:3000 directly in Chrome or Edge.',
+        };
+      }
+
+      return { success: false, code: 'UNKNOWN', error: msg };
     }
   }
 

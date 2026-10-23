@@ -17,6 +17,7 @@ import { GeofencingView } from './views/GeofencingView';
 import { AlertsView } from './views/AlertsView';
 import { AnalyticsView } from './views/AnalyticsView';
 import { SettingsView } from './views/SettingsView';
+import { UsbConnectionModal, UsbModalInfo } from './components/usb/UsbConnectionModal';
 
 export default function App() {
   const [mode, setMode] = useState<AppMode>('DEMO');
@@ -28,6 +29,8 @@ export default function App() {
   const [usbConnected, setUsbConnected] = useState(false);
   const [usbPortInfo, setUsbPortInfo] = useState('');
   const [usbLogs, setUsbLogs] = useState<string[]>([]);
+  const [isConnectingUsb, setIsConnectingUsb] = useState(false);
+  const [usbModalInfo, setUsbModalInfo] = useState<UsbModalInfo>({ isOpen: false });
 
   // Telemetry & Device State
   const [currentPoint, setCurrentPoint] = useState<TelemetryPoint | null>(null);
@@ -204,13 +207,37 @@ export default function App() {
       setUsbConnected(false);
       setUsbPortInfo('');
     } else {
-      const res = await serialService.connect(115200);
-      if (res.success) {
-        setUsbConnected(true);
-        setUsbPortInfo(serialService.getPortInfo());
-        setMode('HARDWARE');
-        setRoutePoints([]);
-        setSpeedChartData([]);
+      setIsConnectingUsb(true);
+      try {
+        const res = await serialService.connect(115200);
+        if (res.success) {
+          setUsbConnected(true);
+          setUsbPortInfo(serialService.getPortInfo());
+          setMode('HARDWARE');
+          setRoutePoints([]);
+          setSpeedChartData([]);
+        } else {
+          setUsbModalInfo({
+            isOpen: true,
+            code: res.code,
+            title:
+              res.code === 'PORT_BUSY'
+                ? 'COM3 Is Currently Busy'
+                : res.code === 'IFRAME_RESTRICTED'
+                ? 'Direct USB in Preview Frame'
+                : 'USB Cable Connection',
+            message: res.error,
+          });
+        }
+      } catch (err: unknown) {
+        setUsbModalInfo({
+          isOpen: true,
+          code: 'UNKNOWN',
+          title: 'USB Connection Notice',
+          message: err instanceof Error ? err.message : String(err),
+        });
+      } finally {
+        setIsConnectingUsb(false);
       }
     }
   };
@@ -294,6 +321,7 @@ export default function App() {
         onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}
         usbConnected={usbConnected}
         usbPortInfo={usbPortInfo}
+        isConnectingUsb={isConnectingUsb}
         onToggleUsb={handleToggleUsb}
       />
 
@@ -388,11 +416,19 @@ export default function App() {
               usbConnected={usbConnected}
               usbPortInfo={usbPortInfo}
               usbLogs={usbLogs}
+              isConnectingUsb={isConnectingUsb}
               onToggleUsb={handleToggleUsb}
             />
           )}
         </main>
       </div>
+
+      {/* USB Serial Connection Diagnostics Modal */}
+      <UsbConnectionModal
+        info={usbModalInfo}
+        onClose={() => setUsbModalInfo({ isOpen: false })}
+        onRetry={handleToggleUsb}
+      />
     </div>
   );
 }

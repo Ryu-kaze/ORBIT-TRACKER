@@ -15,6 +15,7 @@ interface NavbarProps {
   onToggleMobileMenu?: () => void;
   usbConnected?: boolean;
   usbPortInfo?: string;
+  isConnectingUsb?: boolean;
   onToggleUsb?: () => void;
 }
 
@@ -31,6 +32,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onToggleMobileMenu,
   usbConnected = false,
   usbPortInfo,
+  isConnectingUsb = false,
   onToggleUsb,
 }) => {
   const isHardwareOnline = mode === 'HARDWARE' && deviceStatus?.online;
@@ -143,16 +145,39 @@ export const Navbar: React.FC<NavbarProps> = ({
         {onToggleUsb && (
           <button
             onClick={onToggleUsb}
-            title={usbConnected ? `USB Connected (${usbPortInfo || 'COM'}) — Click to disconnect` : 'Connect ESP32 directly via USB Cable (No Wi-Fi needed)'}
+            disabled={isConnectingUsb}
+            title={
+              usbConnected
+                ? `USB Connected (${usbPortInfo || 'COM'}) — Click to disconnect`
+                : isConnectingUsb
+                ? 'Opening USB Serial selector...'
+                : 'Connect ESP32 directly via USB Cable (COM3)'
+            }
             className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-mono font-medium rounded-lg transition-all border ${
               usbConnected
                 ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.3)]'
+                : isConnectingUsb
+                ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50 animate-pulse'
                 : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 hover:text-white border-slate-700'
             }`}
           >
-            <span className={`w-2 h-2 rounded-full ${usbConnected ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
-            <span className="hidden sm:inline">{usbConnected ? 'USB: Linked' : 'Connect USB'}</span>
-            <span className="sm:hidden">{usbConnected ? 'USB' : 'USB'}</span>
+            <span
+              className={`w-2 h-2 rounded-full ${
+                usbConnected
+                  ? 'bg-emerald-400 animate-pulse'
+                  : isConnectingUsb
+                  ? 'bg-cyan-400 animate-ping'
+                  : 'bg-slate-500'
+              }`}
+            />
+            <span className="hidden sm:inline">
+              {usbConnected
+                ? 'USB: Linked'
+                : isConnectingUsb
+                ? 'Connecting...'
+                : 'Connect USB'}
+            </span>
+            <span className="sm:hidden">{usbConnected ? 'USB' : isConnectingUsb ? '...' : 'USB'}</span>
           </button>
         )}
 
