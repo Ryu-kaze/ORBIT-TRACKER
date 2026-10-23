@@ -13,6 +13,9 @@ interface NavbarProps {
   onOpenAlerts: () => void;
   mobileMenuOpen?: boolean;
   onToggleMobileMenu?: () => void;
+  usbConnected?: boolean;
+  usbPortInfo?: string;
+  onToggleUsb?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -26,6 +29,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenAlerts,
   mobileMenuOpen,
   onToggleMobileMenu,
+  usbConnected = false,
+  usbPortInfo,
+  onToggleUsb,
 }) => {
   const isHardwareOnline = mode === 'HARDWARE' && deviceStatus?.online;
   const isDemo = mode === 'DEMO';
@@ -132,6 +138,23 @@ export const Navbar: React.FC<NavbarProps> = ({
             {lastSyncTime ? lastSyncTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'Active'}
           </span>
         </div>
+
+        {/* USB Cable Direct Stream Button */}
+        {onToggleUsb && (
+          <button
+            onClick={onToggleUsb}
+            title={usbConnected ? `USB Connected (${usbPortInfo || 'COM'}) — Click to disconnect` : 'Connect ESP32 directly via USB Cable (No Wi-Fi needed)'}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-mono font-medium rounded-lg transition-all border ${
+              usbConnected
+                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.3)]'
+                : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 hover:text-white border-slate-700'
+            }`}
+          >
+            <span className={`w-2 h-2 rounded-full ${usbConnected ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
+            <span className="hidden sm:inline">{usbConnected ? 'USB: Linked' : 'Connect USB'}</span>
+            <span className="sm:hidden">{usbConnected ? 'USB' : 'USB'}</span>
+          </button>
+        )}
 
         {/* Alerts Bell Button */}
         <button

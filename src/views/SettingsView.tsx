@@ -20,12 +20,20 @@ interface SettingsViewProps {
   mode: AppMode;
   deviceStatus?: DeviceStatus;
   onRefreshStatus: () => void;
+  usbConnected?: boolean;
+  usbPortInfo?: string;
+  usbLogs?: string[];
+  onToggleUsb?: () => void;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
   mode,
   deviceStatus,
   onRefreshStatus,
+  usbConnected = false,
+  usbPortInfo,
+  usbLogs = [],
+  onToggleUsb,
 }) => {
   const [backendUrl, setBackendUrl] = useState(apiService.getBackendUrl());
   const [deviceToken, setDeviceToken] = useState(apiService.getDeviceToken());
@@ -95,6 +103,69 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <p className="text-xs text-slate-400 mt-1">
           Hardware configuration for ESP32-WROOM-32 dev board paired with u-blox NEO-6M GPS receiver.
         </p>
+      </div>
+
+      {/* USB Cable Direct Streaming Panel (No Wi-Fi Needed) */}
+      <div className="p-5 rounded-xl bg-[#111A2B] border border-cyan-500/30 shadow-[0_0_20px_rgba(72,229,255,0.06)] space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className={`w-2.5 h-2.5 rounded-full ${usbConnected ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
+              <span className="text-xs font-semibold text-white uppercase font-mono tracking-wider">
+                USB CABLE DIRECT TRANSFER (NO WI-FI REQUIRED)
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 mt-1">
+              Stream live GPS coordinates directly from your ESP32 over USB cable (COM3) into this browser dashboard.
+            </p>
+          </div>
+
+          {onToggleUsb && (
+            <button
+              onClick={onToggleUsb}
+              className={`px-4 py-2 text-xs font-mono font-semibold rounded-lg transition-all flex items-center gap-2 shrink-0 ${
+                usbConnected
+                  ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500/30'
+                  : 'bg-[#48E5FF] text-slate-950 font-bold hover:bg-[#38d4ee] shadow-[0_0_15px_rgba(72,229,255,0.3)]'
+              }`}
+            >
+              <span>{usbConnected ? `Disconnect (${usbPortInfo || 'COM'})` : 'Connect via USB Cable'}</span>
+            </button>
+          )}
+        </div>
+
+        {/* Real-time Serial Terminal Monitor */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
+            <span>LIVE USB SERIAL DATA STREAM (115200 BAUD)</span>
+            <span className="text-slate-500">
+              {usbConnected ? 'Connected & Streaming' : 'Click "Connect via USB Cable" & pick COM3'}
+            </span>
+          </div>
+          <div className="p-3 rounded-lg bg-[#080D18] border border-slate-800 font-mono text-xs text-emerald-400/90 h-36 overflow-y-auto space-y-1 select-text">
+            {usbLogs && usbLogs.length > 0 ? (
+              usbLogs.map((log, idx) => (
+                <div key={idx} className="whitespace-pre-wrap break-all leading-relaxed">
+                  <span className="text-slate-600 mr-2">[{idx + 1}]</span>
+                  {log}
+                </div>
+              ))
+            ) : (
+              <div className="text-slate-600 italic py-2">
+                {usbConnected
+                  ? 'Waiting for incoming GPS sentences from ESP32...'
+                  : 'No USB serial stream active. Plug ESP32 into USB, close Arduino Serial Monitor, and click "Connect via USB Cable".'}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Alternative Python Bridge Helper */}
+        <div className="text-[11px] text-slate-400 font-mono bg-[#080D18]/60 p-3 rounded-lg border border-slate-800/80">
+          <span className="text-[#48E5FF] font-semibold">Alternative (Python USB Bridge): </span>
+          If your browser does not support Web Serial, run this command in VS Code terminal:
+          <code className="text-white bg-slate-900 px-1.5 py-0.5 rounded ml-1 border border-slate-700">python backend/serial_bridge.py COM3</code>
+        </div>
       </div>
 
       {/* Grid: Diagnostics Status & Backend Config */}

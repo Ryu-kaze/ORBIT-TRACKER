@@ -105,6 +105,32 @@ export class OrbitApiService {
     }
   }
 
+  public async postHardwareTelemetry(point: TelemetryPoint): Promise<boolean> {
+    try {
+      const res = await fetch(`${this.backendUrl}/api/telemetry`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Device-Token': this.deviceToken,
+        },
+        body: JSON.stringify({
+          device_id: 'ESP32-ORBIT-01',
+          lat: point.lat,
+          lng: point.lng,
+          speed: point.speed,
+          altitude: point.altitude,
+          satellites: point.satellites,
+          fix: point.fix,
+          heading: point.heading || 0,
+          timestamp: point.timestamp || Date.now(),
+        }),
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  }
+
   public async fetchHardwareHistory(sessionId?: string, limit: number = 500): Promise<TelemetryPoint[]> {
     try {
       const url = new URL(`${this.backendUrl}/api/history`);

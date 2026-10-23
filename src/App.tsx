@@ -7,6 +7,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { AppMode, AppView, DeviceStatus, GeofenceZone, JourneySession, SystemEvent, TelemetryPoint } from './types';
 import { apiService } from './services/api';
 import { calculateRouteSummary } from './utils/geo';
+import { serialService } from './services/serialService';
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar } from './components/layout/Sidebar';
 import { OverviewView } from './views/OverviewView';
@@ -22,6 +23,11 @@ export default function App() {
   const [currentView, setCurrentView] = useState<AppView>('overview');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // USB Web Serial Cable State
+  const [usbConnected, setUsbConnected] = useState(false);
+  const [usbPortInfo, setUsbPortInfo] = useState('');
+  const [usbLogs, setUsbLogs] = useState<string[]>([]);
 
   // Telemetry & Device State
   const [currentPoint, setCurrentPoint] = useState<TelemetryPoint | null>(null);
@@ -161,6 +167,54 @@ export default function App() {
     }
   };
 
+  // Web Serial cable integration
+  useEffect(() => {
+    serialService.setOnDataCallback((point: TelemetryPoint) => {
+      setDeviceStatus((prev) => ({
+        ...prev,
+        online: true,
+        last_seen: Date.now(),
+        last_fix: point.fix,
+        points_recorded: (prev.points_recorded || 0) + 1,
+      }));
+      setCurrentPoint(point);
+      setRoutePoints((prev) => [...prev.slice(-150), point]);
+      const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      setSpeedChartData((prev) => [
+        ...prev.slice(-25),
+        { time: timeStr, speed: point.speed, altitude: point.altitude },
+      ]);
+      // Silently persist to backend in background
+      apiService.postHardwareTelemetry(point).catch(() => {});
+    });
+
+    serialService.setOnRawLogCallback((line: string) => {
+      setUsbLogs((prev) => [...prev.slice(-60), line]);
+    });
+
+    return () => {
+      serialService.setOnDataCallback(null);
+      serialService.setOnRawLogCallback(null);
+    };
+  }, []);
+
+  const handleToggleUsb = async () => {
+    if (usbConnected) {
+      await serialService.disconnect();
+      setUsbConnected(false);
+      setUsbPortInfo('');
+    } else {
+      const res = await serialService.connect(115200);
+      if (res.success) {
+        setUsbConnected(true);
+        setUsbPortInfo(serialService.getPortInfo());
+        setMode('HARDWARE');
+        setRoutePoints([]);
+        setSpeedChartData([]);
+      }
+    }
+  };
+
   const handleToggleMode = (newMode: AppMode) => {
     setMode(newMode);
     setRoutePoints([]);
@@ -238,6 +292,9 @@ export default function App() {
         }}
         mobileMenuOpen={mobileMenuOpen}
         onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}
+        usbConnected={usbConnected}
+        usbPortInfo={usbPortInfo}
+        onToggleUsb={handleToggleUsb}
       />
 
       <div className="flex-1 flex overflow-hidden">
@@ -328,6 +385,10 @@ export default function App() {
               mode={mode}
               deviceStatus={deviceStatus}
               onRefreshStatus={loadHardwareState}
+              usbConnected={usbConnected}
+              usbPortInfo={usbPortInfo}
+              usbLogs={usbLogs}
+              onToggleUsb={handleToggleUsb}
             />
           )}
         </main>
